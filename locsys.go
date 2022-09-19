@@ -41,6 +41,7 @@ func (locsys *LocalSystem) CommonIncludes() []string {
 
 func NewLocalSystem(verbose bool) (*LocalSystem, error) {
 	var locsys LocalSystem
+	locsys.verbose = verbose
 	locsys.includeFiles = make([]string, 0)
 	locsys.systemIncludeDirectories = locsys.SystemIncludeDirectories()
 	locsys.commonIncludes = locsys.CommonIncludes()
@@ -77,7 +78,6 @@ func NewLocalSystem(verbose bool) (*LocalSystem, error) {
 	if verbose {
 		fmt.Printf("Found %d include files in %s\n", len(locsys.includeFiles), strings.Join(locsys.systemIncludeDirectories, ", "))
 	}
-	locsys.verbose = verbose
 	return &locsys, nil
 }
 
