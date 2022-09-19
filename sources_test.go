@@ -9,34 +9,20 @@ import (
 
 const exampleProjectDirectory = "~/cppprojects/fireworks"
 
-func TestNewSources(t *testing.T) {
-	_, err := NewSources(env.ExpandUser(exampleProjectDirectory), true)
-	if err != nil {
-		t.Fail()
-	}
-	//fmt.Println(src)
-}
-
-func TestIncludes(t *testing.T) {
+// an alternative to an "init" function, for initializing a new LocalSystem
+var src = func() *Sources {
 	src, err := NewSources(env.ExpandUser(exampleProjectDirectory), true)
 	if err != nil {
-		t.Fail()
+		panic(err)
 	}
+	return src
+}()
+
+func TestIncludes(t *testing.T) {
 	shortIncludes := src.ShortIncludes()
 	fmt.Println(shortIncludes)
 }
 
 func TestPrintIncludeInfo(t *testing.T) {
-
-	src, err := NewSources(env.ExpandUser(exampleProjectDirectory), true)
-	if err != nil {
-		t.Fail()
-	}
-
-	locsys, err := NewLocalSystem(true)
-	if err != nil {
-		t.Fail()
-	}
-
 	src.PrintIncludeInfo(locsys)
 }
