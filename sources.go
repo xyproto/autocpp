@@ -154,8 +154,12 @@ func shortest(xs []string) string {
 func shortestButPreferKeyword(xs []string, keyword string) string {
 	minlen := -1
 	s := ""
+	hasKeyword := false
+	foundKeywordAlready := false
 	for _, x := range xs {
-		if (strings.Contains(x, keyword) && !strings.Contains(s, keyword)) || (minlen == -1 || len(x) < minlen) {
+		hasKeyword = strings.Contains(x, keyword)
+		foundKeywordAlready = strings.Contains(s, keyword)
+		if (minlen == -1) || !foundKeywordAlready || (hasKeyword && len(x) < minlen) {
 			minlen = len(x)
 			s = x
 		}
