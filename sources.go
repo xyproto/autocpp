@@ -3,6 +3,7 @@ package autocpp
 import (
 	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -20,6 +21,8 @@ type Sources struct {
 
 func NewSources(rootPath string, verbose bool) (*Sources, error) {
 	var src Sources
+	src.rootPath = rootPath
+	src.verbose = verbose
 	err := filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -47,7 +50,6 @@ func NewSources(rootPath string, verbose bool) (*Sources, error) {
 		return nil, err
 	}
 	src.ReadAll()
-	src.verbose = verbose
 	return &src, nil
 }
 
@@ -64,7 +66,7 @@ func (src *Sources) ReadAll() error {
 	lenall := len(allFilenames)
 	for i, path := range allFilenames {
 		if src.verbose {
-			fmt.Printf("[%d/%d] Reading %s...\n", i, lenall, path)
+			fmt.Printf("[%d/%d, %.2f%%] Reading %s...\n", i+1, lenall, math.Round((float64(i+1)*100.0)/float64(lenall)), path)
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {
@@ -151,12 +153,15 @@ func shortest(xs []string) string {
 
 // shotestButPreferKeyword tries to find the shortest string in the given slice,
 // but if a candidate has the given keyword, prefer that over shorter strings.
+// xs is expected to be sorted with sort.Strings first.
 func shortestButPreferKeyword(xs []string, keyword string) string {
 	minlen := -1
 	s := ""
 	hasKeyword := false
 	foundKeywordAlready := false
-	for _, x := range xs {
+	// loop in reverse order, assume xs is sorted and has the lowest version numbers first
+	for i := len(xs) - 1; i > 0; i-- {
+		x := xs[i]
 		hasKeyword = strings.Contains(x, keyword)
 		foundKeywordAlready = strings.Contains(s, keyword)
 		if (minlen == -1) || !foundKeywordAlready || (hasKeyword && len(x) < minlen) {
@@ -200,13 +205,15 @@ OUT:
 			fmt.Printf("COULD NOT FIND THIS INCLUDE: %s\n", include)
 			continue
 		}
+		sort.Strings(candidates)
+		// candidates are now sorted
 		if src.verbose {
 			fmt.Printf("Candidates for %s:\n", include)
 			for _, candidate := range candidates {
 				fmt.Printf("\t%s\n", candidate)
 			}
 		}
-		shortestCandidate := shortestButPreferKeyword(candidates, "c++")
+		shortestCandidate := shortestButPreferKeyword(candidates, "++")
 		fmt.Printf("FOUND: %s\n", shortestCandidate)
 	}
 }
