@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+var defaultLocalIncludeDirectories = []string{".", "include", "Include", "..", "../include", "../Include", "common", "Common", "../common", "../Common"}
+
 type LocalSystem struct {
 	commonIncludes           []string
 	systemIncludeDirectories []string // can be searched
@@ -39,31 +41,27 @@ func (locsys *LocalSystem) CommonIncludes() []string {
 	return xs
 }
 
+// NewLocalSystem represents a system, its include files, compilers and packages.
+// Creating a new LocalSystem searches all system include directories for include files,
+// but not local directories like "../include" or "common".
 func NewLocalSystem(verbose bool) (*LocalSystem, error) {
 	var locsys LocalSystem
 	locsys.verbose = verbose
 	locsys.includeFiles = make([]string, 0)
 	locsys.systemIncludeDirectories = locsys.SystemIncludeDirectories()
 	locsys.commonIncludes = locsys.CommonIncludes()
-	locsys.localIncludeDirectories = []string{".", "include", "Include", "..", "../include", "../Include", "common", "Common", "../common", "../Common"}
+	locsys.localIncludeDirectories = defaultLocalIncludeDirectories
 	for _, rootPath := range locsys.systemIncludeDirectories {
 		err := filepath.Walk(rootPath, func(path string, info fs.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
 			switch strings.ToLower(filepath.Ext(path)) {
-			case ".h", ".hpp", ".hh", ".h++":
-				//if verbose {
-				//fmt.Printf("added: %q\n", path)
-				//}
-
+			case ".h", ".h++", ".hh", ".hpp":
 				locsys.includeFiles = append(locsys.includeFiles, path)
 			}
 			for _, commonInclude := range locsys.commonIncludes {
 				if strings.HasSuffix(path, commonInclude) {
-					//if verbose {
-					//fmt.Printf("added: %q\n", path)
-					//}
 					locsys.includeFiles = append(locsys.includeFiles, path)
 				}
 			}
@@ -76,7 +74,7 @@ func NewLocalSystem(verbose bool) (*LocalSystem, error) {
 		}
 	}
 	if verbose {
-		fmt.Printf("Found %d include files in %s\n", len(locsys.includeFiles), strings.Join(locsys.systemIncludeDirectories, ", "))
+		fmt.Printf("Found %d include files in these directories: %s\n", len(locsys.includeFiles), strings.Join(locsys.systemIncludeDirectories, ", "))
 	}
 	return &locsys, nil
 }

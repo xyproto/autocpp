@@ -24,5 +24,5 @@ func TestIncludes(t *testing.T) {
 }
 
 func TestPrintIncludeInfo(t *testing.T) {
-	src.PrintIncludeInfo(locsys)
+	src.FindAndPrintIncludePaths(locsys)
 }

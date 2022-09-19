@@ -17,6 +17,7 @@ type Sources struct {
 	absFilenamesCPP    []string
 	absFilenamesC      []string
 	entireSource       []byte
+	foundMap           map[string]string // from a short include name to the full path, if the include was found
 }
 
 func NewSources(rootPath string, verbose bool) (*Sources, error) {
@@ -50,6 +51,7 @@ func NewSources(rootPath string, verbose bool) (*Sources, error) {
 		return nil, err
 	}
 	src.ReadAll()
+	src.foundMap = make(map[string]string)
 	return &src, nil
 }
 
@@ -175,14 +177,17 @@ func shortestButPreferKeyword(xs []string, keyword string) string {
 	return s
 }
 
-func (src *Sources) PrintIncludeInfo(locsys *LocalSystem) {
+// FindIncludePaths fills src.foundMap with short include names and their corresponding paths.
+// It will also return a slice of the short include names that were not found.
+func (src *Sources) FindIncludePaths(locsys *LocalSystem) []string {
+	var notFound []string
 OUT:
 	for _, include := range src.ShortIncludes() {
 		// First search system directories
 		for _, includeDirectory := range locsys.systemIncludeDirectories {
 			path := filepath.Join(includeDirectory, include)
 			if hasS(locsys.includeFiles, path) {
-				fmt.Printf("FOUND: %s\n", path)
+				src.foundMap[include] = path
 				continue OUT
 			}
 		}
@@ -190,11 +195,11 @@ OUT:
 		for _, includeDirectory := range locsys.localIncludeDirectories {
 			path := filepath.Join(includeDirectory, include)
 			if exists(path) {
-				fmt.Printf("FOUND: %s\n", path)
+				src.foundMap[include] = path
 				continue OUT
 			}
 		}
-		// Then look for candidates
+		// Then look for candidates in the include files that has been found on the system
 		var candidates []string
 		for _, includeFile := range locsys.includeFiles {
 			if strings.HasSuffix(includeFile, "/"+include) {
@@ -202,7 +207,7 @@ OUT:
 			}
 		}
 		if len(candidates) == 0 {
-			fmt.Printf("COULD NOT FIND THIS INCLUDE: %s\n", include)
+			notFound = append(notFound, include)
 			continue
 		}
 		sort.Strings(candidates)
@@ -213,8 +218,22 @@ OUT:
 				fmt.Printf("\t%s\n", candidate)
 			}
 		}
-		shortestCandidate := shortestButPreferKeyword(candidates, "++")
-		fmt.Printf("FOUND: %s\n", shortestCandidate)
+		path := shortestButPreferKeyword(candidates, "++")
+		if src.verbose {
+			fmt.Printf("\tChose:\n\t%s\n", path)
+		}
+		src.foundMap[include] = path
+	}
+	return notFound
+}
+
+func (src *Sources) FindAndPrintIncludePaths(locsys *LocalSystem) {
+	notFound := src.FindIncludePaths(locsys)
+	for _, path := range src.foundMap {
+		fmt.Printf("FOUND: %s\n", path)
+	}
+	for _, include := range notFound {
+		fmt.Printf("NOT FOUND: %s\n", include)
 	}
 }
 
